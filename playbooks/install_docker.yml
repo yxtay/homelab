@@ -1,0 +1,20 @@
+---
+- hosts: "{{ target_hosts }}"
+  become: yes
+  vars:
+    target_hosts: docker2
+
+  tasks:
+
+    - name: update and reboot
+      include_role:
+        name: ryandaniels.server_update_reboot
+      vars:
+        proxy_env: 
+
+    - name: install docker
+      include_role: 
+        name: geerlingguy.docker
+      vars:
+        docker_install_compose_plugin: yes
+        docker_install_compose: no

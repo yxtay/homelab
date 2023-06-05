@@ -1,6 +1,7 @@
 ---
 # https://github.com/tteck/Proxmox/blob/main/misc/post-pve-install.sh
 - hosts: "{{ target_hosts }}"
+  become: yes
   vars:
     target_hosts: pve
     pve_remove_nag_path: /usr/local/lib/pve-remove-nag.sh
