@@ -1,0 +1,12 @@
+---
+roles:
+  - buluma.bootstrap
+  - geerlingguy.docker
+  - geerlingguy.github-users
+  - geerlingguy.security
+  - ryandaniels.create_users
+  - ryandaniels.server_update_reboot
+  - singleplatform-eng.users
+
+collections:
+  - devsec.hardening

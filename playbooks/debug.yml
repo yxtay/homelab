@@ -1,0 +1,9 @@
+---
+- hosts: "{{ target_host }}"
+  vars:
+    target_host: localhost
+
+  tasks:
+  - name: debug
+    debug:
+      var: ansible_facts
