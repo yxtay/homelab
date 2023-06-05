@@ -1,7 +1,7 @@
 ---
-- hosts: "{{ target_host }}"
+- hosts: "{{ target_hosts }}"
   vars:
-    target_host: localhost
+    target_hosts: localhost
 
   tasks:
   - name: debug

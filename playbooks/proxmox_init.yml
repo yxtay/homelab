@@ -1,0 +1,108 @@
+---
+# https://github.com/tteck/Proxmox/blob/main/misc/post-pve-install.sh
+- hosts: "{{ target_hosts }}"
+  vars:
+    target_hosts: pve
+    pve_remove_nag_path: /usr/local/lib/pve-remove-nag.sh
+    disable_high_availability: yes
+    install_latest_kernel: yes
+    latest_kernel_name: pve-kernel-6.2
+    install_intel_microcode: yes
+
+  tasks:
+
+    - name: set fact
+      set_fact:
+        pve_enterprise_repo_source_file: /etc/apt/sources.list.d/pve-enterprise.list
+        pve_repo_gpg_key_file: /etc/apt/trusted.gpg.d/proxmox-release-{{ ansible_distribution_release }}.gpg
+        pve_repo_url: http://download.proxmox.com/{{ ansible_distribution | lower }}/pve
+
+    - name: set fact
+      set_fact:
+        pve_no_sub_repo_source: deb [arch=amd64 signed-by={{ pve_repo_gpg_key_file }}] {{ pve_repo_url }} {{ ansible_distribution_release }} pve-no-subscription
+
+    - name: comment out proxmox enterprise repository
+      replace:
+        dest: "{{ pve_enterprise_repo_source_file }}"
+        regexp: "^deb"
+        replace: "# deb"
+
+    - name: add proxmox no subscription repository
+      apt_repository :
+        repo: "{{ pve_no_sub_repo_source }}"
+        filename: pve-no-subscription
+        state: present
+
+    - name: add repository non-free compoenent
+      replace:
+        dest: /etc/apt/sources.list
+        regexp: "contrib$"
+        replace: "contrib non-free"
+      when: ansible_distribution_major_version | int <= 11
+
+    - name: remove proxmox subcription nag
+      block:
+        - name: copy remove nag script
+          copy:
+            src: pve-remove-nag.sh
+            dest: "{{ pve_remove_nag_path }}"
+            mode: "0644"
+          notify: run pve remove nag script
+
+        - name: add remove nag dpkg post-invoke hook
+          lineinfile:
+            dest: /etc/apt/apt.conf.d/99-pve-remove-nag
+            create: true
+            mode: "0644"
+            line: DPkg::Post-Invoke {"/usr/bin/bash {{ pve_remove_nag_path }}";}
+            state: present
+
+    - name: disable high availability services
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      with_items:
+        - pve-ha-lrm
+        - pve-ha-crm
+        - corosync
+      when: disable_high_availability
+      
+    - name: update
+      apt:
+        upgrade: dist
+        cache_valid_time: 86400
+
+    - name: install latest proxmox kernel
+      apt:
+        name: "{{ latest_kernel_name }}"
+        state: present
+        cache_valid_time: 86400
+      when: install_latest_kernel
+
+    - name: install intel microcode
+      apt:
+        name: intel-microcode
+        state: present
+        cache_valid_time: 86400
+      when: install_intel_microcode
+  
+    - name: check if reboot required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: reboot if required
+      reboot:
+      when: reboot_required_file.stat.exists
+
+  handlers:
+    - name: run pve remove nag script
+      block:
+        - name: run pve remove nag script
+          command: bash {{ pve_remove_nag_path }}
+
+        - name: restart pveproxy
+          service:
+            name: pveproxy
+            state: restarted
