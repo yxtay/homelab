@@ -9,6 +9,7 @@
     install_latest_kernel: yes
     latest_kernel_name: pve-kernel-6.2
     install_intel_microcode: yes
+    force_reboot: no
 
   tasks:
 
@@ -17,10 +18,6 @@
         pve_enterprise_repo_source_file: /etc/apt/sources.list.d/pve-enterprise.list
         pve_repo_gpg_key_file: /etc/apt/trusted.gpg.d/proxmox-release-{{ ansible_distribution_release }}.gpg
         pve_repo_url: http://download.proxmox.com/{{ ansible_distribution | lower }}/pve
-
-    - name: set fact
-      set_fact:
-        pve_no_sub_repo_source: deb [arch=amd64 signed-by={{ pve_repo_gpg_key_file }}] {{ pve_repo_url }} {{ ansible_distribution_release }} pve-no-subscription
 
     - name: comment out proxmox enterprise repository
       replace:
@@ -33,6 +30,8 @@
         repo: "{{ pve_no_sub_repo_source }}"
         filename: pve-no-subscription
         state: present
+      vars:
+        pve_no_sub_repo_source: deb [arch=amd64 signed-by={{ pve_repo_gpg_key_file }}] {{ pve_repo_url }} {{ ansible_distribution_release }} pve-no-subscription
 
     - name: add repository non-free compoenent
       replace:
@@ -63,7 +62,7 @@
         name: "{{ item }}"
         state: stopped
         enabled: false
-      with_items:
+      loop:
         - pve-ha-lrm
         - pve-ha-crm
         - corosync
@@ -72,7 +71,7 @@
     - name: update
       apt:
         upgrade: dist
-        cache_valid_time: 86400
+        update_cache: yes
 
     - name: install latest proxmox kernel
       apt:
@@ -95,7 +94,7 @@
 
     - name: reboot if required
       reboot:
-      when: reboot_required_file.stat.exists
+      when: reboot_required_file.stat.exists or force_reboot
 
   handlers:
     - name: run pve remove nag script
