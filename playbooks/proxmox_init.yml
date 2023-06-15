@@ -9,7 +9,17 @@
     install_latest_kernel: yes
     latest_kernel_name: pve-kernel-6.2
     install_intel_microcode: yes
-    force_reboot: no
+    subuid_entries:
+      - root:1000:1  # user
+      - root:100000:65536
+    subgid_entries:
+      - root:5:1  # tty
+      - root:29:1  # audio
+      - root:44:1  # video
+      - root:101:1  # input
+      - root:103:1  # render
+      - root:1000:1  # user
+      - root:100000:65536
 
   tasks:
 
@@ -24,6 +34,10 @@
         dest: "{{ pve_enterprise_repo_source_file }}"
         regexp: "^deb"
         replace: "# deb"
+
+    - name: bootstrap hosts
+      include_role:
+        name: buluma.bootstrap
 
     - name: add proxmox no subscription repository
       apt_repository :
@@ -79,6 +93,7 @@
         state: present
         cache_valid_time: 86400
       when: install_latest_kernel
+      notify: reboot
 
     - name: install intel microcode
       apt:
@@ -94,7 +109,21 @@
 
     - name: reboot if required
       reboot:
-      when: reboot_required_file.stat.exists or force_reboot
+      when: reboot_required_file.stat.exists
+
+    - name: add entires to subuid
+      lineinfile:
+        dest: /etc/subuid
+        line: "{{ item }}"
+        state: present
+      loop:  "{{ subuid_entries }}"
+
+    - name: add entires to subgid
+      lineinfile:
+        dest: /etc/subgid
+        line: "{{ item }}"
+        state: present
+      loop:  "{{ subgid_entries }}"
 
   handlers:
     - name: run pve remove nag script
@@ -106,3 +135,6 @@
           service:
             name: pveproxy
             state: restarted
+
+    - name: reboot
+        reboot:
