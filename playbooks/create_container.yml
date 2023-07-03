@@ -1,0 +1,142 @@
+---
+- hosts: "{{ target_hosts }}"
+  become: yes
+  vars:
+    target_hosts: pve
+
+    proxmox_user:  # secret
+    proxmox_password:  # secret
+    proxmox_host:
+
+    lxc_vmid:
+    lxc_password:  # secret
+    lxc_pubkey:  # secret
+    lxc_hostname: lxc_{{ lxc_vmid }}
+    lxc_template_storage: local
+    lxc_template_content_type: vztmpl
+    lxc_template_name: debian-12-standard_12.0-1_amd64.tar.zst
+    lxc_ostemplate: "{{ lxc_template_storage }}:{{ lxc_template_content_type }}/{{ lxc_template_name }}"
+    lxc_disk_gb: local-lvm:8
+    lxc_cores: 1
+    lxc_memory_mb: 512
+    lxc_swap_mb: 512
+    lxc_ip: ip=dhcp
+    lxc_ip6: ip6=auto
+    lxc_onboot: yes
+    lxc_features:
+    lxc_mounts:
+    lxc_delete: no
+    lxc_extra_conf: []
+    lxc_mount_devices: []
+    lxc_idmap: []
+
+
+  tasks:
+
+    - name: setup python
+      apt:
+        name: virtualenv
+        state: present
+        cache_valid_time: 86400
+
+    - name: setup virtualenv
+      pip:
+        name:
+          - proxmoxer
+          - requests
+        state: present
+        virtualenv: /opt/venv/ansible
+        virtualenv_site_packages: true
+
+    - name: download ct template
+      vars:
+        ansible_python_interpreter: /opt/venv/ansible/bin/python
+      proxmox_template:
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        api_host: "{{ proxmox_host }}"
+
+        node: "{{ proxmox_host }}"
+        storage: "{{ lxc_template_storage }}"
+        content_type: "{{ lxc_template_content_type }}"
+        template: "{{ lxc_template_name }}"
+        state: present
+
+
+    - vars:
+        ansible_python_interpreter: /opt/venv/ansible/bin/python
+      block:
+
+        - name: stop container
+          proxmox:
+            api_user: "{{ proxmox_user }}"
+            api_password: "{{ proxmox_password }}"
+            api_host: "{{ proxmox_host }}"
+            vmid: "{{ lxc_vmid }}"
+            state: stopped
+
+        - name: delete container
+          proxmox:
+            api_user: "{{ proxmox_user }}"
+            api_password: "{{ proxmox_password }}"
+            api_host: "{{ proxmox_host }}"
+            vmid: "{{ lxc_vmid }}"
+            state: absent
+
+      when: lxc_delete
+
+    - name: create container
+      vars:
+        ansible_python_interpreter: /opt/venv/ansible/bin/python
+      proxmox:
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        api_host: "{{ proxmox_host }}"
+
+        node: "{{ proxmox_host }}"
+        vmid: "{{ lxc_vmid }}"
+        password: "{{ lxc_password }}"
+        pubkey: "{{ lxc_pubkey }}"
+        hostname: "{{ lxc_hostname }}"
+
+        ostemplate: "{{ lxc_ostemplate }}"
+        disk: "{{ lxc_disk_gb }}"
+        cores: "{{ lxc_cores }}"
+        memory: "{{ lxc_memory_mb }}"
+        swap: "{{ lxc_swap_mb }}"
+        netif: '{"net0":"name=eth0,{{ lxc_ip }},{{ lxc_ip6 }},bridge=vmbr0"}'
+
+        onboot: "{{ lxc_onboot }}"
+        features: "{{ lxc_features }}"
+        mounts: "{{ lxc_mounts }}"
+
+        state: present
+      register: lxc_output
+
+    - name: stop container
+      vars:
+        ansible_python_interpreter: /opt/venv/ansible/bin/python
+      proxmox:
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        api_host: "{{ proxmox_host }}"
+        vmid: "{{ lxc_vmid }}"
+        state: stopped
+
+    - name: modify config
+      become: yes
+      lineinfile:
+        dest: /etc/pve/lxc/{{ lxc_vmid }}.conf
+        line: "{{ item }}"
+        state: present
+      loop: "{{ lxc_extra_conf + lxc_mount_devices + lxc_idmap }}"
+
+    - name: start container
+      vars:
+        ansible_python_interpreter: /opt/venv/ansible/bin/python
+      proxmox:
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        api_host: "{{ proxmox_host }}"
+        vmid: "{{ lxc_vmid }}"
+        state: started

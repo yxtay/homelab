@@ -1,0 +1,40 @@
+lxc_vmid: 101
+lxc_hostname: ubuntu
+lxc_template_name: ubuntu-22.04-standard_22.04-1_amd64.tar.zst
+lxc_disk_gb: local-lvm:16
+lxc_cores: 4
+lxc_memory_mb: 8196
+lxc_swap_mb: 1024
+lxc_ip: gw=192.168.50.1,ip=192.168.50.6/24
+lxc_features:
+  - keyctl=1
+  - nesting=1
+lxc_mount_devices:
+  - "lxc.cgroup2.devices.allow: c 4:7 rwm"
+  - "lxc.mount.entry: /dev/tty7 dev/tty7 none bind,optional,create=file"
+  - "lxc.cgroup2.devices.allow: c 13:* rwm"
+  - "lxc.mount.entry: /dev/input dev/input none bind,optional,create=dir"
+  - "lxc.cgroup2.devices.allow: c 29:0 rwm"
+  - "lxc.mount.entry: /dev/fb0 dev/fb0 none bind,optional,create=file"
+  - "lxc.cgroup2.devices.allow: c 116:* rwm"
+  - "lxc.mount.entry: /dev/snd dev/snd none bind,optional,create=dir"
+  - "lxc.cgroup2.devices.allow: c 226:0 rwm"
+  - "lxc.cgroup2.devices.allow: c 226:128 rwm"
+  - "lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir"
+lxc_idmap:
+  - "lxc.idmap: u 0 100000 1000"
+  - "lxc.idmap: g 0 100000 5"
+  - "lxc.idmap: g 5 5 1"  # tty
+  - "lxc.idmap: g 6 100006 23"
+  - "lxc.idmap: g 29 29 1"  # audio
+  - "lxc.idmap: g 30 100030 14"
+  - "lxc.idmap: g 44 44 1"  # video
+  - "lxc.idmap: g 45 100045 60"
+  - "lxc.idmap: g 105 101 1"  # input
+  - "lxc.idmap: g 106 100106 2"
+  - "lxc.idmap: g 108 104 1"  # render
+  - "lxc.idmap: g 109 100109 891"
+  - "lxc.idmap: u 1000 1000 1"  # user
+  - "lxc.idmap: g 1000 1000 1"  # user
+  - "lxc.idmap: u 1001 101001 64535"
+  - "lxc.idmap: g 1001 101001 64535"
