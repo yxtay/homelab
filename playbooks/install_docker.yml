@@ -2,9 +2,13 @@
 - hosts: "{{ target_hosts }}"
   become: yes
   vars:
-    target_hosts: docker2
+    target_hosts: docker
 
   tasks:
+
+    - name: bootstrap hosts
+      include_role:
+        name: buluma.bootstrap
 
     - name: update and reboot
       include_role:
@@ -18,3 +22,5 @@
       vars:
         docker_install_compose_plugin: yes
         docker_install_compose: no
+        docker_users:
+          - yxtay
