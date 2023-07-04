@@ -29,11 +29,11 @@ lxc_idmap:
   - "lxc.idmap: g 29 29 1"  # audio
   - "lxc.idmap: g 30 100030 14"
   - "lxc.idmap: g 44 44 1"  # video
-  - "lxc.idmap: g 45 100045 58"
-  - "lxc.idmap: g 103 101 1"  # input
-  - "lxc.idmap: g 104 100104 1"
-  - "lxc.idmap: g 105 104 1"  # render
-  - "lxc.idmap: g 106 100106 894"
+  - "lxc.idmap: g 45 100045 56"
+  - "lxc.idmap: g 101 101 1"  # input
+  - "lxc.idmap: g 102 100102 2"
+  - "lxc.idmap: g 104 104 1"  # render
+  - "lxc.idmap: g 105 100105 895"
   - "lxc.idmap: u 1000 1000 1"  # user
   - "lxc.idmap: g 1000 1000 1"  # user
   - "lxc.idmap: u 1001 101001 64535"
